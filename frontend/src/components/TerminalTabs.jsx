@@ -1,6 +1,14 @@
 import { useMemo, useState } from 'react';
 import { TerminalView } from './TerminalView';
 
+const createTab = (shell = 'bash') => {
+  const id = crypto.randomUUID();
+  return { id, label: `Terminal ${id.slice(0, 4)}`, shell };
+};
+
+export function TerminalTabs({ theme, sessionToken }) {
+  const [tabs, setTabs] = useState(() => [createTab()]);
+  const [activeTabId, setActiveTabId] = useState(() => tabs[0].id);
 const makeTab = (id, shell = 'bash') => ({ id, label: `Terminal ${id.slice(0, 4)}`, shell });
 
 export function TerminalTabs({ theme }) {
@@ -10,6 +18,7 @@ export function TerminalTabs({ theme }) {
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId), [tabs, activeTabId]);
 
   const addTab = (shell) => {
+    const next = createTab(shell);
     const next = makeTab(crypto.randomUUID(), shell);
     setTabs((prev) => [...prev, next]);
     setActiveTabId(next.id);
@@ -18,6 +27,15 @@ export function TerminalTabs({ theme }) {
   const closeTab = (id) => {
     setTabs((prev) => {
       const filtered = prev.filter((tab) => tab.id !== id);
+      if (!filtered.length) {
+        const fallback = createTab();
+        setActiveTabId(fallback.id);
+        return [fallback];
+      }
+      if (activeTabId === id) {
+        setActiveTabId(filtered[filtered.length - 1].id);
+      }
+      return filtered;
       if (activeTabId === id && filtered.length) {
         setActiveTabId(filtered[filtered.length - 1].id);
       }
@@ -30,6 +48,9 @@ export function TerminalTabs({ theme }) {
       <div className="tabbar">
         <div className="tabbar-left">
           {tabs.map((tab) => (
+            <button key={tab.id} className={`tab ${tab.id === activeTabId ? 'active' : ''}`} onClick={() => setActiveTabId(tab.id)}>
+              {tab.label} ({tab.shell})
+              <span className="close" role="button" tabIndex={0} onClick={(event) => { event.stopPropagation(); closeTab(tab.id); }}>×</span>
             <button
               key={tab.id}
               className={`tab ${tab.id === activeTabId ? 'active' : ''}`}
@@ -61,6 +82,7 @@ export function TerminalTabs({ theme }) {
           <button onClick={() => addTab('zsh')}>+ Zsh</button>
         </div>
       </div>
+      {activeTab && <TerminalView key={activeTab.id} tab={activeTab} theme={theme} sessionToken={sessionToken} />}
       {activeTab && <TerminalView key={activeTab.id} tab={activeTab} theme={theme} />}
     </section>
   );

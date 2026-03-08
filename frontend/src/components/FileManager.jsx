@@ -2,6 +2,26 @@ import { useEffect, useRef, useState } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8080/api`;
 
+export function FileManager({ sessionToken }) {
+  const [files, setFiles] = useState([]);
+  const [path, setPath] = useState('.');
+  const inputRef = useRef(null);
+
+  const headers = { 'x-session-token': sessionToken };
+
+  const refresh = async (target = path) => {
+    const response = await fetch(`${API_URL}/files?path=${encodeURIComponent(target)}`, { headers });
+    if (!response.ok) {
+      return;
+    }
+    const payload = await response.json();
+    setFiles(payload.files ?? []);
+    setPath(payload.path ?? '.');
+  };
+
+  useEffect(() => {
+    refresh('.');
+  }, [sessionToken]);
 export function FileManager() {
   const [files, setFiles] = useState([]);
   const [path, setPath] = useState('/workspace');
@@ -28,6 +48,26 @@ export function FileManager() {
     formData.append('file', file);
     formData.append('path', path);
 
+    await fetch(`${API_URL}/upload`, { method: 'POST', headers, body: formData });
+    await refresh(path);
+  };
+
+  const downloadFile = async (target) => {
+    const response = await fetch(`${API_URL}/download?path=${encodeURIComponent(target)}`, { headers });
+    if (!response.ok) {
+      return;
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = target.split('/').pop();
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
     await fetch(`${API_URL}/upload`, { method: 'POST', body: formData });
     await refresh(path);
   };
@@ -45,6 +85,7 @@ export function FileManager() {
             {file.type === 'directory' ? (
               <button onClick={() => refresh(file.path)}>📁 {file.name}</button>
             ) : (
+              <button onClick={() => downloadFile(file.path)}>📄 {file.name}</button>
               <a href={`${API_URL}/download?path=${encodeURIComponent(file.path)}`}>📄 {file.name}</a>
             )}
           </li>

@@ -1,3 +1,13 @@
+import { useEffect, useMemo, useState } from 'react';
+import { TerminalTabs } from './components/TerminalTabs';
+import { FileManager } from './components/FileManager';
+
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8080/api`;
+
+const themes = {
+  midnight: { background: '#0b1020', foreground: '#d6deff', cursor: '#7ee787' },
+  matrix: { background: '#020f02', foreground: '#b7ffb7', cursor: '#00ff41' },
+  graphite: { background: '#171717', foreground: '#f5f5f5', cursor: '#f59e0b' }
 import { useMemo, useState } from 'react';
 import { TerminalTabs } from './components/TerminalTabs';
 import { FileManager } from './components/FileManager';
@@ -39,6 +49,29 @@ const themes = {
 export function App() {
   const [themeName, setThemeName] = useState('midnight');
   const [showFileManager, setShowFileManager] = useState(true);
+  const [sessionToken, setSessionToken] = useState(localStorage.getItem('sessionToken') || '');
+
+  const theme = useMemo(() => themes[themeName], [themeName]);
+
+  useEffect(() => {
+    const ensureSession = async () => {
+      if (sessionToken) {
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/session`, { method: 'POST' });
+      const payload = await response.json();
+      localStorage.setItem('sessionToken', payload.token);
+      setSessionToken(payload.token);
+    };
+
+    ensureSession();
+  }, [sessionToken]);
+
+  if (!sessionToken) {
+    return <div className="loading">Bootstrapping isolated terminal session...</div>;
+  }
+
 
   const theme = useMemo(() => themes[themeName], [themeName]);
 
@@ -55,6 +88,7 @@ export function App() {
               ))}
             </select>
           </label>
+          <button onClick={() => setShowFileManager((prev) => !prev)}>{showFileManager ? 'Hide' : 'Show'} files</button>
           <button onClick={() => setShowFileManager((prev) => !prev)}>
             {showFileManager ? 'Hide' : 'Show'} files
           </button>
@@ -62,6 +96,8 @@ export function App() {
         </div>
       </header>
       <div className="workspace-grid">
+        {showFileManager && <FileManager sessionToken={sessionToken} />}
+        <TerminalTabs theme={theme} sessionToken={sessionToken} />
         {showFileManager && <FileManager />}
         <TerminalTabs theme={theme} />
       </div>
