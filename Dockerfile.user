@@ -1,0 +1,14 @@
+FROM ubuntu:24.04
+
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    bash zsh ca-certificates curl git vim nano less \
+  && useradd -ms /bin/bash terminal \
+  && mkdir -p /workspace \
+  && chown -R terminal:terminal /workspace /home/terminal \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+USER terminal
+WORKDIR /workspace
+CMD ["bash"]
