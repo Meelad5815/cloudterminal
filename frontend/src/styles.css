@@ -1,0 +1,163 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #0b1020;
+}
+
+
+.loading {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #cbd5e1;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  color: #e2e8f0;
+}
+
+.topbar {
+  height: 56px;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: #111827;
+  border-bottom: 1px solid #1f2937;
+  align-items: center;
+  gap: 1rem;
+}
+
+.topbar h1 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.topbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.topbar-controls button,
+.topbar-controls select,
+.topbar-controls a,
+.file-manager button,
+.tabbar button {
+  background: #1f2937;
+  color: #e5e7eb;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  text-decoration: none;
+  padding: 0.35rem 0.6rem;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  flex: 1;
+  min-height: 0;
+}
+
+.file-manager {
+  border-right: 1px solid #1f2937;
+  padding: 0.7rem;
+  overflow: auto;
+}
+
+.file-manager ul {
+  list-style: none;
+  padding: 0;
+}
+
+.file-manager li {
+  margin-bottom: 0.35rem;
+}
+
+.file-manager li button,
+.file-manager li a {
+  width: 100%;
+  text-align: left;
+}
+
+.terminal-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tabbar {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #1f2937;
+  padding: 0.35rem;
+  gap: 0.6rem;
+}
+
+.tabbar-left {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+}
+
+.tab.active {
+  border-color: #3b82f6;
+}
+
+.close {
+  margin-left: 0.45rem;
+  font-weight: 700;
+}
+
+.terminal-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.terminal-status {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  padding: 0.4rem 0.7rem;
+}
+
+.terminal-instance {
+  flex: 1;
+  min-height: 0;
+  padding: 0.3rem;
+}
+
+@media (max-width: 900px) {
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .file-manager {
+    max-height: 220px;
+    border-bottom: 1px solid #1f2937;
+    border-right: 0;
+  }
+
+  .topbar {
+    height: auto;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

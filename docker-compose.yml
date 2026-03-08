@@ -1,0 +1,30 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      TERMINAL_IMAGE: cloudterminal-user
+      CONTAINER_CPU_LIMIT: "1"
+      CONTAINER_MEMORY_LIMIT: "512m"
+      SESSION_TTL_MS: "1800000"
+      AUTH_SESSION_MAX_AGE_MS: "43200000"
+      WORKSPACES_ROOT: /workspace/sessions
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./workspace:/workspace
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_WS_URL: ws://localhost:8080
+      VITE_API_URL: http://localhost:8080/api
+    depends_on:
+      - backend
