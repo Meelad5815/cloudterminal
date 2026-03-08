@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import pty from 'node-pty';
 import { spawn } from 'node:child_process';
 
@@ -14,6 +15,8 @@ const terminals = new Map();
 function safeId(value) {
   return String(value).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
 }
+
+const sessions = new Map();
 
 function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
@@ -47,6 +50,8 @@ async function ensureWorkspace(userId) {
 
 async function ensureContainer(userId, terminalId, workspacePath) {
   const containerName = `terminal-${safeId(userId)}-${safeId(terminalId)}`;
+async function ensureContainer(sessionId) {
+  const containerName = `terminal-${sessionId}`;
   await runCommand('docker', [
     'run',
     '--detach',
@@ -69,6 +74,15 @@ async function ensureContainer(userId, terminalId, workspacePath) {
     `type=bind,src=${workspacePath},dst=/workspace`,
     '--network',
     'none',
+    '--read-only',
+    '--tmpfs',
+    '/tmp',
+    '--tmpfs',
+    '/workspace',
+    '--network',
+    'none',
+    '--security-opt',
+    'no-new-privileges',
     IMAGE,
     'sleep',
     'infinity'
@@ -87,6 +101,15 @@ export async function createOrGetTerminal(userId, terminalId, shell) {
   const safeShell = shell === 'zsh' ? 'zsh' : 'bash';
   const workspacePath = await ensureWorkspace(userId);
   const containerName = await ensureContainer(userId, terminalId, workspacePath);
+export async function createOrGetSession(sessionId, shell) {
+  let session = sessions.get(sessionId);
+  if (session) {
+    session.expiresAt = Date.now() + SESSION_TTL_MS;
+    return session;
+  }
+
+  const safeShell = shell === 'zsh' ? 'zsh' : 'bash';
+  const containerName = await ensureContainer(sessionId);
   const ptyProcess = pty.spawn('docker', ['exec', '-it', containerName, safeShell], {
     name: 'xterm-color',
     cols: 120,
@@ -101,6 +124,13 @@ export async function createOrGetTerminal(userId, terminalId, shell) {
     terminalId: safeId(terminalId),
     shell: safeShell,
     workspacePath,
+    cwd: os.homedir(),
+    env: process.env
+  });
+
+  session = {
+    id: sessionId,
+    shell: safeShell,
     containerName,
     ptyProcess,
     history: [],
@@ -117,6 +147,12 @@ export async function createOrGetTerminal(userId, terminalId, shell) {
     await fs.appendFile(historyFile, data).catch(() => undefined);
 
     terminal.sockets.forEach((socket) => {
+  ptyProcess.onData((data) => {
+    session.history.push(data);
+    if (session.history.length > 1000) {
+      session.history.shift();
+    }
+    session.sockets.forEach((socket) => {
       if (socket.readyState === socket.OPEN) {
         socket.send(JSON.stringify({ type: 'output', data }));
       }
@@ -164,4 +200,48 @@ export async function destroyTerminal(key) {
 
 export function listTerminals() {
   return terminals;
+  sessions.set(sessionId, session);
+  return session;
+}
+
+export function registerSocket(session, socket) {
+  session.sockets.add(socket);
+  socket.send(JSON.stringify({ type: 'history', data: session.history }));
+  session.expiresAt = Date.now() + SESSION_TTL_MS;
+}
+
+export function resizeSession(session, cols, rows) {
+  session.ptyProcess.resize(cols, rows);
+  session.expiresAt = Date.now() + SESSION_TTL_MS;
+}
+
+export function writeInput(session, data) {
+  session.ptyProcess.write(data);
+  session.expiresAt = Date.now() + SESSION_TTL_MS;
+}
+
+export function removeSocket(session, socket) {
+  session.sockets.delete(socket);
+  if (!session.sockets.size) {
+    session.expiresAt = Date.now() + SESSION_TTL_MS;
+  }
+}
+
+export async function destroySession(sessionId) {
+  const session = sessions.get(sessionId);
+  if (!session) {
+    return;
+  }
+
+  session.ptyProcess.kill();
+  try {
+    await runCommand('docker', ['rm', '-f', session.containerName]);
+  } catch {
+    // ignore missing containers
+  }
+  sessions.delete(sessionId);
+}
+
+export function getSessions() {
+  return sessions;
 }

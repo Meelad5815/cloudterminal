@@ -7,6 +7,11 @@ const WS_URL = (import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}
 
 export function TerminalView({ tab, theme, sessionToken }) {
   const containerRef = useRef(null);
+export function TerminalView({ tab, theme }) {
+  const containerRef = useRef(null);
+  const termRef = useRef(null);
+  const fitAddonRef = useRef(null);
+  const socketRef = useRef(null);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
@@ -36,6 +41,11 @@ export function TerminalView({ tab, theme, sessionToken }) {
     ws.onopen = () => {
       setConnected(true);
       send({ type: 'resize', cols: terminal.cols, rows: terminal.rows });
+    const ws = new WebSocket(`${WS_URL}/terminal?tabId=${tab.id}&shell=${tab.shell}`);
+
+    ws.onopen = () => {
+      setConnected(true);
+      ws.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows }));
     };
 
     ws.onmessage = (event) => {
@@ -75,6 +85,27 @@ export function TerminalView({ tab, theme, sessionToken }) {
       terminal.dispose();
     };
   }, [tab.id, tab.shell, theme, sessionToken]);
+    terminal.onData((data) => ws.send(JSON.stringify({ type: 'input', data })));
+
+    const onResize = () => {
+      fitAddon.fit();
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows }));
+      }
+    };
+
+    window.addEventListener('resize', onResize);
+
+    termRef.current = terminal;
+    fitAddonRef.current = fitAddon;
+    socketRef.current = ws;
+
+    return () => {
+      window.removeEventListener('resize', onResize);
+      ws.close();
+      terminal.dispose();
+    };
+  }, [tab.id, tab.shell, theme]);
 
   return (
     <div className="terminal-wrapper">

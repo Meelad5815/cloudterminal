@@ -9,11 +9,17 @@ const createTab = (shell = 'bash') => {
 export function TerminalTabs({ theme, sessionToken }) {
   const [tabs, setTabs] = useState(() => [createTab()]);
   const [activeTabId, setActiveTabId] = useState(() => tabs[0].id);
+const makeTab = (id, shell = 'bash') => ({ id, label: `Terminal ${id.slice(0, 4)}`, shell });
+
+export function TerminalTabs({ theme }) {
+  const [tabs, setTabs] = useState(() => [makeTab(crypto.randomUUID())]);
+  const [activeTabId, setActiveTabId] = useState(() => tabs?.[0]?.id);
 
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId), [tabs, activeTabId]);
 
   const addTab = (shell) => {
     const next = createTab(shell);
+    const next = makeTab(crypto.randomUUID(), shell);
     setTabs((prev) => [...prev, next]);
     setActiveTabId(next.id);
   };
@@ -30,6 +36,10 @@ export function TerminalTabs({ theme, sessionToken }) {
         setActiveTabId(filtered[filtered.length - 1].id);
       }
       return filtered;
+      if (activeTabId === id && filtered.length) {
+        setActiveTabId(filtered[filtered.length - 1].id);
+      }
+      return filtered.length ? filtered : [makeTab(crypto.randomUUID())];
     });
   };
 
@@ -41,6 +51,29 @@ export function TerminalTabs({ theme, sessionToken }) {
             <button key={tab.id} className={`tab ${tab.id === activeTabId ? 'active' : ''}`} onClick={() => setActiveTabId(tab.id)}>
               {tab.label} ({tab.shell})
               <span className="close" role="button" tabIndex={0} onClick={(event) => { event.stopPropagation(); closeTab(tab.id); }}>×</span>
+            <button
+              key={tab.id}
+              className={`tab ${tab.id === activeTabId ? 'active' : ''}`}
+              onClick={() => setActiveTabId(tab.id)}
+            >
+              {tab.label} ({tab.shell})
+              <span
+                className="close"
+                role="button"
+                tabIndex={0}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  closeTab(tab.id);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.stopPropagation();
+                    closeTab(tab.id);
+                  }
+                }}
+              >
+                ×
+              </span>
             </button>
           ))}
         </div>
@@ -50,6 +83,7 @@ export function TerminalTabs({ theme, sessionToken }) {
         </div>
       </div>
       {activeTab && <TerminalView key={activeTab.id} tab={activeTab} theme={theme} sessionToken={sessionToken} />}
+      {activeTab && <TerminalView key={activeTab.id} tab={activeTab} theme={theme} />}
     </section>
   );
 }

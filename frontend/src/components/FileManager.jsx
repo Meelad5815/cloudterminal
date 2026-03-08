@@ -22,6 +22,21 @@ export function FileManager({ sessionToken }) {
   useEffect(() => {
     refresh('.');
   }, [sessionToken]);
+export function FileManager() {
+  const [files, setFiles] = useState([]);
+  const [path, setPath] = useState('/workspace');
+  const inputRef = useRef(null);
+
+  const refresh = async (target = path) => {
+    const response = await fetch(`${API_URL}/files?path=${encodeURIComponent(target)}`);
+    const payload = await response.json();
+    setFiles(payload.files ?? []);
+    setPath(payload.path ?? '/workspace');
+  };
+
+  useEffect(() => {
+    refresh('/workspace');
+  }, []);
 
   const upload = async (event) => {
     const file = event.target.files?.[0];
@@ -53,6 +68,10 @@ export function FileManager({ sessionToken }) {
     URL.revokeObjectURL(url);
   };
 
+    await fetch(`${API_URL}/upload`, { method: 'POST', body: formData });
+    await refresh(path);
+  };
+
   return (
     <aside className="file-manager">
       <div className="file-manager-header">
@@ -67,6 +86,7 @@ export function FileManager({ sessionToken }) {
               <button onClick={() => refresh(file.path)}>📁 {file.name}</button>
             ) : (
               <button onClick={() => downloadFile(file.path)}>📄 {file.name}</button>
+              <a href={`${API_URL}/download?path=${encodeURIComponent(file.path)}`}>📄 {file.name}</a>
             )}
           </li>
         ))}
