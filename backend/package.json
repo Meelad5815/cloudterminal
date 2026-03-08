@@ -1,0 +1,20 @@
+{
+  "name": "backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "build": "echo 'backend build not required'",
+    "start": "node src/server.js",
+    "lint": "echo 'backend lint not configured'"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.2",
+    "node-pty": "^1.0.0",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.1"
+  }
+}
